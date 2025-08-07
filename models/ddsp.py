@@ -23,9 +23,10 @@ class Harmonics(nn.Module):
         super(Harmonics, self).__init__()
         self.sr = sr
         self.num_samples = num_samples
+        self.n_harmonics = n_harmonics
         self.fc1 = nn.Linear(embedding_dim, embedding_dim // 2)
         self.fc2 = nn.Linear(embedding_dim // 2, embedding_dim // 4)
-        self.fc3 = nn.Linear(embedding_dim // 4, n_harmonics)
+        self.fc3 = nn.Linear(embedding_dim // 4, self.n_harmonics)
 
     def forward(self, x, f0):
         x = self.fc1(x)
@@ -34,13 +35,11 @@ class Harmonics(nn.Module):
         x = F.relu(x)
         x = self.fc3(x)
         A = F.tanh(x)
-        t = torch.linspace(0, self.num_samples / self.sr, self.num_samples, device=x.device)[None, None, :]
-        harmonics = torch.arange(1, 33, device=x.device)[None, :, None]
         f0 = f0[:, None]
-        sines = torch.sin(2 * torch.pi * f0 * harmonics * t)
         A = A[:, :, None]
-        y = (A * sines).sum(dim=1)
-
+        t = torch.linspace(0, self.num_samples / self.sr, self.num_samples, device=x.device)[None, None, :]
+        k = torch.arange(1, self.n_harmonics + 1, device=x.device)[None, :, None]
+        y = (A * torch.sin(2 * torch.pi * f0 * k * t)).sum(dim=1)
         return y
 
 class Noise(nn.Module):
@@ -104,6 +103,14 @@ for i in range(1, harmonics + 1):
     signal += A * torch.sin(2 * math.pi * f0 * i * t)
 signal += 0.01 * torch.randn_like(signal)
 signal = signal.unsqueeze(0).unsqueeze(0).to(device)
+print(signal.shape)
 f0 = torch.tensor([f0]).unsqueeze(0).to(device)
 x = ddsp(signal, f0)
 print(x.shape)
+
+criterion = nn.MSELoss()
+loss = criterion(x, signal.mean(dim=1))
+optimizer = torch.optim.Adam(ddsp.parameters(), lr=0.001)
+optimizer.zero_grad()
+loss.backward()
+optimizer.step()
