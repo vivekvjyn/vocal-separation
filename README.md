@@ -1,12 +1,12 @@
 # DDSP Vocal Separation
 
-'''mermaid
+```mermaid
 flowchart TD
-    A[/mixed signal/] --> B[encoder];
-    B[encoder] --> C[harmonics];
-    B[encoder] --> D[noise];
-    C --> E[(+)];
-    D --> E;
-    E --> F[reverb];
-    F --> G[/target signal/];
-'''
+    A[/mixed signal/] --> B[encoder]
+    B --> C[harmonics]
+    B --> D[noise]
+    C --> E((+))
+    D --> E
+    E --> F[reverb]
+    F --> G[/target signal/]
+```
