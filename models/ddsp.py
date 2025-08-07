@@ -90,7 +90,6 @@ class DDSP(nn.Module):
         x = self.reverb(y)
         return x
 
-
 ddsp = DDSP().to(device)
 f0 = 100
 A = 0.25
@@ -107,7 +106,6 @@ print(signal.shape)
 f0 = torch.tensor([f0]).unsqueeze(0).to(device)
 x = ddsp(signal, f0)
 print(x.shape)
-
 criterion = nn.MSELoss()
 loss = criterion(x, signal.mean(dim=1))
 optimizer = torch.optim.Adam(ddsp.parameters(), lr=0.001)
