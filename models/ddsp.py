@@ -35,11 +35,11 @@ class Harmonics(nn.Module):
         x = F.relu(x)
         x = self.fc3(x)
         A = F.tanh(x)
-        f0 = f0[:, None]
-        A = A[:, :, None]
-        t = torch.linspace(0, self.num_samples / self.sr, self.num_samples, device=x.device)[None, None, :]
-        k = torch.arange(1, self.n_harmonics + 1, device=x.device)[None, :, None]
-        y = (A * torch.sin(2 * torch.pi * f0 * k * t)).sum(dim=1)
+        t = torch.linspace(0, self.num_samples / self.sr, self.num_samples, device=x.device)
+        k = torch.arange(1, self.n_harmonics + 1, device=x.device)
+        phi = (f0 * k)[:, :, None] * t[None, None, :]
+        y = A[:, :, None] * torch.sin(2 * torch.pi * phi)
+        y = y.sum(dim=1)
         return y
 
 class Noise(nn.Module):
@@ -87,28 +87,5 @@ class DDSP(nn.Module):
         sine = self.harmonics(z, f0)
         eps = self.noise(z)
         y = sine + eps
-        x = self.reverb(y)
+        x = self.reverb(y.unsqueeze(1))
         return x
-
-ddsp = DDSP().to(device)
-f0 = 100
-A = 0.25
-harmonics = 3
-sampling_rate = 16000
-duration = 1.0
-t = torch.linspace(0, duration, 1024) # time vector
-signal = torch.zeros_like(t)
-for i in range(1, harmonics + 1):
-    signal += A * torch.sin(2 * math.pi * f0 * i * t)
-signal += 0.01 * torch.randn_like(signal)
-signal = signal.unsqueeze(0).unsqueeze(0).to(device)
-print(signal.shape)
-f0 = torch.tensor([f0]).unsqueeze(0).to(device)
-x = ddsp(signal, f0)
-print(x.shape)
-criterion = nn.MSELoss()
-loss = criterion(x, signal.mean(dim=1))
-optimizer = torch.optim.Adam(ddsp.parameters(), lr=0.001)
-optimizer.zero_grad()
-loss.backward()
-optimizer.step()
